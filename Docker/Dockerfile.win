@@ -1,0 +1,38 @@
+
+#
+# https://techcommunity.microsoft.com/t5/containers/removing-the-latest-tag-an-update-on-mcr/ba-p/393045
+# https://hub.docker.com/_/microsoft-windows-servercore
+# https://hub.docker.com/_/microsoft-windows-nanoserver
+
+# 2004 does not work ATM
+#FROM mcr.microsoft.com/windows/servercore:2004
+# We need servercore for powershell.exe
+FROM mcr.microsoft.com/windows/servercore:1803-amd64
+# nanoserver seems not to contain powershell.exe
+#FROM mcr.microsoft.com/windows/nanoserver:1803-amd64
+
+# environment varable
+ENV PY_VER = 3.9.8
+LABEL Description="Python" Vendor="Python Software Foundation" Version=$PY_VER
+
+# copy all the local src files to the container
+COPY . .
+
+# install Python in image
+RUN powershell.exe -Command \
+    $ErrorActionPreference = 'Stop'; \
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+    wget https://www.python.org/ftp/python/$PY_VER/python-$PY_VER.exe -OutFile c:\python-$PY_VER.exe; \
+    Start-Process c:\python-$PY_VER.exe -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1' -Wait; \
+    Remove-Item c:\python-$PY_VER.exe -Force
+
+# install dependencies
+RUN powershell.exe -Command \
+    pip install --no-cache-dir -r requirements.txt;
+
+# tell the port number the container should expose
+# EXPOSE 1883
+
+# RUN echo print("Hello World!")
+# run the command
+CMD ["py", "c:/mqtt_paho_test.py"]
